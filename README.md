@@ -94,3 +94,4 @@ maintained by the hypervisor.
 Since a hypervisor doing such code integrity checks will refuse to accept code pages that aren't signed by
 a key that the hypervisor trusts, this does impact eBPF programs running natively.  As such, when HVCI
 is enabled, eBPF programs work fine in interpreted mode, but not when using JIT compilation.
+
