@@ -1,9 +1,7 @@
-# For documentation on the github environment, see
-# https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners
-#
-# For documentation on the syntax of this file, see
-# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
-name: MSBuild
+# Copyright (c) Microsoft Corporation
+# SPDX-License-Identifier: MIT
+
+name: Run Tests
 
 on: pull_request
 
@@ -14,9 +12,6 @@ jobs:
         configurations: [Release]
     runs-on: windows-latest
     env:
-      # Path to the solution file relative to the root of the project.
-      SOLUTION_FILE_PATH: ebpf-for-windows.sln
-
       # Configuration type to build.
       # You can convert this to a build matrix if you need coverage of multiple configuration types.
       # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
@@ -26,11 +21,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-
-    - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v1
 
     - name: Install ProcDump64
       working-directory: ${{env.GITHUB_WORKSPACE}}
@@ -46,40 +36,18 @@ jobs:
       run: |
         procdump64.exe -accepteula -i -r -ma c:/dumps/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}
 
-    - name: Install LLVM and Clang
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-        curl -fsSL -o LLVM10.exe https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.0/LLVM-10.0.0-win64.exe
-        7z x LLVM10.exe -y -o"C:/Program Files/LLVM"
-        echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-    - name: Restore NuGet packages
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
-
-    - name: Create verifier project
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-        cd external\ebpf-verifier
-        mkdir build
-        cmake -B build
-
-    - name: Build
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      # Add additional options to the MSBuild command line here (like platform or verbosity level).
-      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{env.BUILD_PLATFORM}} ${{env.SOLUTION_FILE_PATH}}
-
-    - name: Upload Build Output
-      uses: actions/upload-artifact@v2
+    - name: Download artifact
+      uses: dawidd6/action-download-artifact@v2
       with:
+        # Required, workflow file name or ID
+        workflow: build.yml
         name: Build x64 ${{ matrix.configurations }}
         path: ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}
-        retention-days: 5
 
     - name: Run Unit Tests
       working-directory: ./${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}
-      run: ./unit_tests.exe -s [end_to_end],[sample_extension]
+      run: |
+        for ($i = 0; $i -lt 100; $i++) {./unit_tests.exe -s [end_to_end]}
 
     - name: Check for crash dumps
       working-directory: c:/dumps/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}
