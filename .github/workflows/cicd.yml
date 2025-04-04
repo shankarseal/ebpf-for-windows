@@ -42,6 +42,26 @@ jobs:
   # Jobs to run on pull, push, and schedule.
   # ---------------------------------------------------------------------------
 
+  ensure-issue-linked:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if PR references an issue
+        run: |
+          echo "Checking for issue reference in PR title or body..."
+          TITLE="${{ github.event.pull_request.title }}"
+          BODY="${{ github.event.pull_request.body }}"
+
+          echo "Title: $TITLE"
+          echo "Body: $BODY"
+          if [[ "$TITLE" =~ #[0-9]+ ]] || [[ "$BODY" =~ #[0-9]+ ]]; then
+            echo "✅ Issue reference found."
+          else
+            echo "❌ No issue reference found in PR title or body."
+            echo "Please reference an issue using #<number>."
+            exit 1
+          fi
+
   # Perform the regular build.
   regular:
     # Always run this job.
