@@ -57,9 +57,12 @@ jobs:
           TITLE="${{ github.event.pull_request.title }}"
           BODY="${{ github.event.pull_request.body }}"
           CONTENT="${TITLE}${BODY}"
+          CONTENT_NO_NEWLINES=$(echo "$CONTENT" | tr -d '\n\r')
+
+          echo "Sanitized content: $CONTENT_NO_NEWLINES"
 
           # Find all #<number> matches
-          ISSUE_NUMBERS=$(echo "$CONTENT" | grep -oE "#[0-9]+" | tr -d '#' | sort -u)
+          ISSUE_NUMBERS=$(echo "$CONTENT_NO_NEWLINES" | grep -oE "#[0-9]+" | tr -d '#' | sort -u)
 
           if [ -z "$ISSUE_NUMBERS" ]; then
             echo "❌ No issue references (like #123) found in PR title or body."
