@@ -65,7 +65,7 @@ jobs:
           ISSUE_NUMBERS=$(echo "$CONTENT_NO_NEWLINES" | grep -oE "#[0-9]+" | tr -d '#' | sort -u)
 
           if [ -z "$ISSUE_NUMBERS" ]; then
-            echo "❌ No issue references (like #123) found in PR title or body."
+            echo "❌ No issue references (like #123) found in PR title or body." >&2
             exit 1
           fi
 
@@ -90,7 +90,7 @@ jobs:
           done
 
           if [ "$VALID_ISSUE_FOUND" = false ]; then
-            echo "❌ None of the referenced issues exist in the repository."
+            echo "❌ None of the referenced issues exist in the repository." >&2
             exit 1
           fi
 
