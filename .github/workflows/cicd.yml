@@ -76,10 +76,12 @@ jobs:
 
           for ISSUE in $ISSUE_NUMBERS; do
             echo "🔎 Checking if issue #$ISSUE exists..."
+            echo "🔗 URL: https://api.github.com/repos/${{ github.event.pull_request.base.repo.full_name }}/issues/$ISSUE"
+            echo "🔗 URL: https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE"
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${{ github.event.pull_request.base.repo.full_name }}/issues/$ISSUE")
+              "https://api.github.com/repos/microsoft/ebpf-for-windows/issues/$ISSUE")
 
             if [ "$HTTP_STATUS" = "200" ]; then
               echo "✅ Issue #$ISSUE exists!"
