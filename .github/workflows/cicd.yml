@@ -99,12 +99,22 @@ jobs:
             # Build JSON payload safely (jq is pre-installed on ubuntu-latest)
             PAYLOAD=$(jq -n --arg body "$MSG" '{body:$body}')
 
-            curl -s -X POST \
+            # Try to post the comment and capture status/output
+            RESPONSE=$(curl -i -s -w "%{http_code}" -o /tmp/resp.out \
+              -X POST \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               -H "Content-Type: application/json" \
               -d "$PAYLOAD" \
-              "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments"
+              "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments")
+
+            cat /tmp/resp.out
+            echo "HTTP Status: $RESPONSE"
+
+            if [ "$RESPONSE" -ne 201 ]; then
+              echo "::error ::Failed to comment on PR. HTTP $RESPONSE"
+              exit 1
+            fi
           fi
 
 
