@@ -54,7 +54,7 @@ jobs:
         run: |
           echo "Extracting issue references from PR..."
           # REPO="${{ github.repository }}"
-          REPO = "microsoft/ebpf-for-windows"
+          REPO="microsoft/ebpf-for-windows"
           PR_NUMBER="${{ github.event.pull_request.number }}"
           TITLE="${{ github.event.pull_request.title }}"
           BODY="${{ github.event.pull_request.body }}"
