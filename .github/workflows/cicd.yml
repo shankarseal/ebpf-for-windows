@@ -71,26 +71,26 @@ jobs:
           if [ -z "$ISSUE_NUMBERS" ]; then
             # Lightweight notice in the Actions log
             echo "::notice ::No issue references (e.g. #123) found in PR title or body."
+          else
+            echo "Found issue references: $ISSUE_NUMBERS"
+
+            for ISSUE in $ISSUE_NUMBERS; do
+              echo "Checking if issue #$ISSUE exists..."
+              echo "URL: https://api.github.com/repos/$REPO/issues/$ISSUE"
+              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/$REPO/issues/$ISSUE")
+
+              if [ "$HTTP_STATUS" = "200" ]; then
+                echo "::notice Issue #$ISSUE exists!"
+                VALID_ISSUE_FOUND=true
+                break
+              else
+                echo "::warning Issue #$ISSUE not found (HTTP $HTTP_STATUS)"
+              fi
+            done
           fi
-
-          echo "Found issue references: $ISSUE_NUMBERS"
-
-          for ISSUE in $ISSUE_NUMBERS; do
-            echo "Checking if issue #$ISSUE exists..."
-            echo "URL: https://api.github.com/repos/$REPO/issues/$ISSUE"
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/$REPO/issues/$ISSUE")
-
-            if [ "$HTTP_STATUS" = "200" ]; then
-              echo "::notice Issue #$ISSUE exists!"
-              VALID_ISSUE_FOUND=true
-              break
-            else
-              echo "::warning Issue #$ISSUE not found (HTTP $HTTP_STATUS)"
-            fi
-          done
 
           if [ "$VALID_ISSUE_FOUND" = false ]; then
             # Friendly comment on the PR itself
