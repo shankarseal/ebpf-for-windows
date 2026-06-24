@@ -4916,3 +4916,75 @@ TEST_CASE("custom_maps_concurrent_insert_delete_and_query_preprocess", "[custom_
 {
     _test_custom_maps_concurrent_insert_delete_and_query(false);
 }
+
+TEST_CASE("multi_attach_sample_extension", "[sample_ext]")
+{
+    _test_helper_end_to_end test_helper;
+    test_helper.initialize();
+
+    // Create a multi-instance hook provider for the sample extension.
+    multi_instance_hook_t hook(EBPF_PROGRAM_TYPE_SAMPLE, EBPF_ATTACH_TYPE_SAMPLE);
+    REQUIRE(hook.initialize() == EBPF_SUCCESS);
+    program_info_provider_t sample_program_info;
+    REQUIRE(sample_program_info.initialize(EBPF_PROGRAM_TYPE_SAMPLE) == EBPF_SUCCESS);
+
+    // Native programs must be loaded from distinct binaries.
+    // Create a copy of the DLL for the second instance.
+    const char* file_name1 = "test_sample_ebpf_um.dll";
+    const char* file_name2 = "test_sample_ebpf_um_2.dll";
+    REQUIRE(CopyFileA(file_name1, file_name2, FALSE) != 0);
+
+    const char* error_message = nullptr;
+    bpf_object_ptr object1;
+    bpf_object_ptr object2;
+    fd_t program_fd1;
+    fd_t program_fd2;
+
+    int result =
+        ebpf_program_load(file_name1, BPF_PROG_TYPE_UNSPEC, EBPF_EXECUTION_NATIVE, &object1, &program_fd1, &error_message);
+    if (error_message) {
+        printf("ebpf_program_load failed with %s\n", error_message);
+        ebpf_free((void*)error_message);
+        error_message = nullptr;
+    }
+    REQUIRE(result == 0);
+
+    result =
+        ebpf_program_load(file_name2, BPF_PROG_TYPE_UNSPEC, EBPF_EXECUTION_NATIVE, &object2, &program_fd2, &error_message);
+    if (error_message) {
+        printf("ebpf_program_load failed with %s\n", error_message);
+        ebpf_free((void*)error_message);
+        error_message = nullptr;
+    }
+    REQUIRE(result == 0);
+
+    // Attach program 1 with attach_id 0.
+    REQUIRE(hook.attach(program_fd1, 0) == EBPF_SUCCESS);
+
+    // Attach program 2 with attach_id 1.
+    REQUIRE(hook.attach(program_fd2, 1) == EBPF_SUCCESS);
+
+    // Fire program at attach_id 0.
+    INITIALIZE_SAMPLE_CONTEXT;
+    uint32_t hook_result = 0;
+    REQUIRE(hook.fire(ctx, &hook_result, 0) == EBPF_SUCCESS);
+    REQUIRE(hook_result == 42);
+
+    // Fire program at attach_id 1.
+    hook_result = 0;
+    REQUIRE(hook.fire(ctx, &hook_result, 1) == EBPF_SUCCESS);
+    REQUIRE(hook_result == 42);
+
+    // Verify that an unoccupied attach_id fails.
+    REQUIRE(hook.fire(ctx, &hook_result, 2) == EBPF_EXTENSION_FAILED_TO_LOAD);
+
+    // Detach and close.
+    hook.detach(0);
+    hook.detach(1);
+
+    bpf_object__close(object1.release());
+    bpf_object__close(object2.release());
+
+    // Clean up the copy.
+    DeleteFileA(file_name2);
+}
